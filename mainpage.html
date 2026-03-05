@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Travel & Tourism App — Prototype</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <style>
+    :root{--accent:#0ea5a4;--muted:#6b7280;--card:#ffffff;--bg:#f3f4f6}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial;background:var(--bg);color:#111}
+    header{background:linear-gradient(90deg,var(--accent),#06b6d4);color:white;padding:18px 20px;display:flex;align-items:center;justify-content:space-between}
+    header .brand{display:flex;gap:12px;align-items:center}
+    header h1{font-size:18px;margin:0}
+    header .controls{display:flex;gap:10px;align-items:center}
+    button{background:transparent;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
+    .btn-primary{background:white;color:var(--accent);font-weight:600}
+    .container{max-width:1200px;margin:20px auto;padding:0 16px}
+    .grid{display:grid;grid-template-columns:1fr 380px;gap:18px}
+    .card{background:var(--card);border-radius:12px;padding:14px;box-shadow:0 6px 18px rgba(16,24,40,0.06)}
+    .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px}
+    .tile{padding:12px;border-radius:10px;background:linear-gradient(180deg,#fff,#f8fafc);display:flex;flex-direction:column;gap:8px}
+    .tile h3{margin:0;font-size:14px}
+    .tile p{margin:0;color:var(--muted);font-size:13px}
+    #map{height:420px;border-radius:10px;overflow:hidden}
+    aside .section{margin-bottom:12px}
+    .search{display:flex;gap:8px}
+    .search input{flex:1;padding:10px;border-radius:8px;border:1px solid #e6e9ee}
+    .hazard-item{display:flex;justify-content:space-between;padding:8px;border-radius:8px;border:1px dashed #e6e9ee;margin-bottom:8px}
+    .planner-row{display:flex;gap:8px}
+    .planner-row input,select{flex:1;padding:8px;border-radius:8px;border:1px solid #e6e9ee}
+    .bikers{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .biker{display:flex;gap:8px;align-items:center;padding:8px;border-radius:8px}
+    .avatar{width:44px;height:44px;border-radius:50%;background:#e6f7f7;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent)}
+    footer{padding:12px;text-align:center;color:var(--muted);font-size:13px}
+    @media (max-width:980px){.grid{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,1fr)}.bikers{grid-template-columns:1fr}}
+    @media (max-width:520px){.tiles{grid-template-columns:1fr}}
+    .muted{color:var(--muted)}
+    .chip{display:inline-block;padding:6px 8px;border-radius:999px;background:#f1f5f9;font-size:13px}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="6" fill="white"/><path d="M6 13l3 3 9-9" stroke="#06b6d4" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div>
+        <h1>Wayfinder — Travel & Tourism</h1>
+        <div class="muted" style="font-size:12px">Discover, plan & travel safely</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="chip" id="openHazardsBtn">Hazard Alerts</button>
+      <button class="chip" id="openReviewBtn">Reviews</button>
+      <button class="chip" id="openPlannerBtn">Plan Trip</button>
+      <button id="loginBtn" class="btn-primary">Sign in</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h2 style="margin:0">Popular & Latest Spots</h2>
+        <div class="muted">Showing curated & trending places</div>
+      </div>
+      <div class="tiles" id="spotsGrid"></div>
+      <div class="grid">
+        <div class="card">
+          <h3 style="margin-top:0">Map & Route Search</h3>
+          <div class="search" style="margin-bottom:8px">
+            <input id="fromInput" placeholder="From (city / place)" />
+            <input id="toInput" placeholder="To (destination)" />
+            <button id="routeSearchBtn" class="btn-primary">Search</button>
+          </div>
+          <div id="map"></div>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+            <div class="chip">Show popular spots</div>
+            <div class="chip">Show hazards</div>
+            <div class="chip">Download route</div>
+          </div>
+        </div>
+
+        <aside>
+          <div class="section card">
+            <h4 style="margin-top:0">Quick Search</h4>
+            <input id="quickSearch" placeholder="Search destinations, e.g., Goa" />
+            <div style="margin-top:8px;display:flex;gap:8px">
+              <button id="searchBtn" class="btn-primary">Search</button>
+              <button id="nearbyBtn">Nearby</button>
+            </div>
+          </div>
+
+          <div class="section card">
+            <h4 style="margin-top:0">Hazards (live)</h4>
+            <div id="hazardsList"></div>
+            <div style="margin-top:8px"><small class="muted">Tap 'Hazard Alerts' for full details</small></div>
+          </div>
+
+          <div class="section card">
+            <h4 style="margin-top:0">Biker Connections</h4>
+            <div class="bikers" id="bikersList"></div>
+            <div style="margin-top:8px"><small class="muted">Find & connect with riders going your way</small></div>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </main>
+
+  <!-- New Safety Section -->
+  <section class="container card" style="margin-top:20px">
+    <h3 style="margin-top:0">Safety Tech Highlight</h3>
+    <p>
+      Introducing a smart variable device for vehicles that detects accidents in real-time. Once an impact is sensed, the device automatically sends an alert to nearby hospitals and emergency ambulance services, ensuring rapid assistance and potentially saving lives. This technology enhances road safety and provides peace of mind to drivers and passengers alike.
+    </p>
+  </section>
+
+  <footer>
+    Prototype UI • Save this page as an HTML file and open in a browser to try the interactive demo.
+  </footer>
+
+  <!-- Modals -->
+  <div id="loginModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);align-items:center;justify-content:center">
+    <div style="background:white;padding:16px;border-radius:12px;width:320px">
+      <h3 style="margin-top:0">Sign in</h3>
+      <input id="email" placeholder="Email" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e6e9ee;margin-bottom:8px" />
+      <input id="password" type="password" placeholder="Password" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e6e9ee;margin-bottom:8px" />
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button id="closeLogin">Close</button>
+        <button id="doLogin" class="btn-primary">Sign in</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="hazardModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);align-items:center;justify-content:center;padding:20px">
+    <div style="background:white;padding:18px;border-radius:12px;max-width:720px;width:100%;max-height:80vh;overflow:auto">
+      <h3 style="margin-top:0">Hazard Alerts — happening & upcoming</h3>
+      <div id="hazardDetails"></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:10px"><button id="closeHazard">Close</button></div>
+    </div>
+  </div>
+
+  <div id="plannerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);align-items:center;justify-content:center;padding:20px">
+    <div style="background:white;padding:18px;border-radius:12px;max-width:720px;width:100%;max-height:80vh;overflow:auto">
+      <h3 style="margin-top:0">Trip Planner</h3>
+      <div style="display:grid;gap:10px">
+        <input id="tripDest" placeholder="Destination (city/place)" />
+        <div class="planner-row">
+          <input id="tripDays" type="number" placeholder="Days" min="1" />
+          <input id="tripBudget" type="number" placeholder="Total Budget (₹)" />
+        </div>
+        <select id="tripStyle"><option>Economy</option><option>Comfort</option><option>Luxury</option></select>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button id="closePlanner">Close</button>
+          <button id="generatePlan" class="btn-primary">Generate Plan</button>
+        </div>
+      </div>
+      <div id="planResult" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- Review Modal -->
+  <div id="reviewModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.35);align-items:center;justify-content:center;padding:20px;overflow:auto;z-index:1000">
+    <div style="background:white;padding:18px;border-radius:12px;max-width:720px;width:100%;max-height:90vh;overflow:auto;position:relative;z-index:1100">
+      <h3 style="margin-top:0">Review Portal</h3>
+      
+      <!-- Map behind content -->
+      <div id="reviewMap" style="height:250px;width:100%;position:absolute;top:0;left:0;z-index:1;border-radius:12px;"></div>
+
+      <div style="position:relative;z-index:1100;display:grid;gap:10px;margin-top:260px">
+        <input id="reviewTitle" placeholder="Review title (e.g., Amazing ride to Coorg!)" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e6e9ee;margin-bottom:8px"/>
+        <textarea id="reviewText" placeholder="Write your blog / experience..." rows="5"
+          style="width:100%;padding:8px;border-radius:8px;border:1px solid #e6e9ee;margin-bottom:8px"></textarea>
+        <input id="reviewTags" placeholder="Add hashtags (comma separated, e.g., #adventure,#roadtrip)" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e6e9ee;margin-bottom:8px"/>
+        <label style="font-size:14px;color:#555">Upload pictures:</label>
+        <input id="reviewImage" type="file" accept="image/*" style="margin-bottom:8px"/>
+        <div id="imagePreview" style="margin-bottom:8px"></div>
+        <label style="font-size:14px;color:#555">Tag place:</label>
+        <select id="reviewPlace" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e6e9ee;margin-bottom:8px">
+          <option value="Shimla">Shimla</option>
+          <option value="Goa">Goa</option>
+          <option value="Manali">Manali</option>
+          <option value="Jaipur">Jaipur</option>
+          <option value="Alleppey">Alleppey</option>
+          <option value="Hyderabad">Hyderabad</option>
+        </select>
+        <label style="font-size:14px;color:#555">Tag friends (Ctrl+Click multiple):</label>
+        <select id="reviewFriends" multiple size="4" style="width:100%;padding:8px;border-radius:8px;border:1px solid #e6e9ee;margin-bottom:8px">
+          <option>Asha</option>
+          <option>Ravi</option>
+          <option>Meera</option>
+          <option>Sameer</option>
+        </select>
+        <div style="display:flex;gap:8px;justify-content:flex-end;">
+          <button id="closeReview">Close</button>
+          <button id="submitReview" class="btn-primary">Post Review</button>
+        </div>
+      </div>
+
+      <div id="postedReviews" style="margin-top:18px;position:relative;z-index:1100">
+        <h4>Recent Reviews</h4>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // --- Sample data ---
+    const spots = [
+      {name:'Shimla Ridge', city:'Shimla', desc:'Scenic hill station', rating:4.6},
+      {name:'Goa Beach', city:'Goa', desc:'Sun, sand & nightlife', rating:4.7},
+      {name:'Valley Trek', city:'Manali', desc:'Adventure trekking', rating:4.5},
+      {name:'Historical Fort', city:'Jaipur', desc:'Heritage site', rating:4.4},
+      {name:'Backwater', city:'Alleppey', desc:'Houseboats & canals', rating:4.8},
+      {name:'City Heritage', city:'Hyderabad', desc:'Culture & food', rating:4.3}
+    ];
+    const hazards = [
+      {type:'Landslide', place:'NH-44 near Ghat', when:'Happening', severity:'High', advice:'Avoid route; expect delays'},
+      {type:'Cyclone', place:'Bay of Bengal coast', when:'Upcoming (2 days)', severity:'Severe', advice:'Monitor weather; coastal evacuation possible'},
+      {type:'Heavy Rain', place:'Munnar region', when:'Today evening', severity:'Medium', advice:'Carry rain gear; road slippage possible'},
+      {type:'Road damage', place:'Kanyakumari — Trivandrum', when:'Happening', severity:'Low', advice:'Use alternate bypass'}
+    ];
+    const bikers = [
+      {name:'Asha', from:'Bangalore', to:'Coorg', days:'2 days', bio:'Weekend rider, loves coffee stops'},
+      {name:'Ravi', from:'Pune', to:'Goa', days:'3 days', bio:'Experienced on coastal routes'},
+      {name:'Meera', from:'Hyderabad', to:'Hampi', days:'1 day', bio:'Solo rider, photo enthusiast'},
+      {name:'Sameer', from:'Mumbai', to:'Lonavala', days:'1 day', bio:'Group rides every Sunday'}
+    ];
+
+    // Render spots
+    const spotsGrid = document.getElementById('spotsGrid');
+    spots.forEach(s=>{
+      const el = document.createElement('div'); el.className='tile';
+      el.innerHTML = `<h3>${s.name}</h3>
+        <p class="muted">${s.city} — ${s.desc}</p>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+          <div class="muted">⭐ ${s.rating}</div>
+          <button class='chip' onclick="viewOnMap('${s.city}')">View</button>
+        </div>`;
+      spotsGrid.appendChild(el);
+    });
+
+    // Hazards sidebar
+    const hazardsList = document.getElementById('hazardsList');
+    hazards.forEach(h=>{
+      const d = document.createElement('div'); d.className='hazard-item';
+      d.innerHTML = `<div><strong>${h.type}</strong>
+        <div class='muted' style='font-size:13px'>${h.place} • ${h.when}</div></div>
+        <div style='text-align:right'>
+          <div class='muted' style='font-size:13px'>${h.severity}</div>
+          <button class='chip' onclick='openHazardDetails("${h.type}")'>Details</button>
+        </div>`;
+      hazardsList.appendChild(d);
+    });
+
+    // Bikers
+    const bikersList = document.getElementById('bikersList');
+    bikers.forEach(b=>{
+      const d=document.createElement('div');d.className='biker';
+      d.innerHTML=`<div class='avatar'>${b.name[0]}</div>
+        <div><strong>${b.name}</strong><div class='muted' style='font-size:13px'>${b.from} → ${b.to} (${b.days})</div></div>`;
+      bikersList.appendChild(d);
+    });
+
+    // Map
+    const map = L.map('map').setView([20.59,78.96],4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    function viewOnMap(city){alert("Would center map on "+city);}
+    document.getElementById('routeSearchBtn').onclick=()=>alert("Route search: "+fromInput.value+" → "+toInput.value);
+
+    // Hazard modal
+    const hazardModal=document.getElementById('hazardModal');
+    document.getElementById('openHazardsBtn').onclick=()=>hazardModal.style.display='flex';
+    document.getElementById('closeHazard').onclick=()=>hazardModal.style.display='none';
+    const hazardDetails=document.getElementById('hazardDetails');
+    function openHazardDetails(type){
+      const h=hazards.find(x=>x.type===type);
+      hazardDetails.innerHTML=`<div style="padding:12px;border:1px solid #e6e9ee;border-radius:10px;margin-bottom:8px">
+        <h4 style="margin:0">${h.type} — ${h.place}</h4>
+        <p style="margin:6px 0">Time: ${h.when}<br>Severity: ${h.severity}</p>
+        <p style="margin:6px 0">Advice: ${h.advice}</p>
+      </div>`;
+    }
+
+    // Login modal
+    const loginModal=document.getElementById('loginModal');
+    document.getElementById('loginBtn').onclick=()=>loginModal.style.display='flex';
+    document.getElementById('closeLogin').onclick=()=>loginModal.style.display='none';
+    document.getElementById('doLogin').onclick=()=>{alert('Logged in as '+email.value);loginModal.style.display='none'};
+
+    // Planner modal
+    const plannerModal=document.getElementById('plannerModal');
+    document.getElementById('openPlannerBtn').onclick=()=>plannerModal.style.display='flex';
+    document.getElementById('closePlanner').onclick=()=>plannerModal.style.display='none';
+    document.getElementById('generatePlan').onclick=()=>{
+      planResult.innerHTML=`<div class='card'>
+        <h4>Suggested Itinerary for ${tripDest.value}</h4>
+        <ul><li>${tripDays.value} days stay</li>
+        <li>Budget: ₹${tripBudget.value}</li>
+        <li>Style: ${tripStyle.value}</li></ul>
+      </div>`;
+    };
+
+    // Review modal
+    const reviewModal=document.getElementById('reviewModal');
+    document.getElementById('openReviewBtn').onclick=()=>reviewModal.style.display='flex';
+    document.getElementById('closeReview').onclick=()=>reviewModal.style.display='none';
+
+    // Review map
+    const reviewMap = L.map('reviewMap').setView([20.59,78.96],4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(reviewMap);
+
+    // Review posting
+    document.getElementById('submitReview').onclick=()=>{
+      const title=document.getElementById('reviewTitle').value;
+      const text=document.getElementById('reviewText').value;
+      const tags=document.getElementById('reviewTags').value;
+      const place=document.getElementById('reviewPlace').value;
+      const friends=[...document.getElementById('reviewFriends').selectedOptions].map(o=>o.value).join(', ');
+      if(!title||!text){alert("Please add title and text");return;}
+      const div=document.createElement('div');
+      div.className='card';
+      div.innerHTML=`<h4>${title}</h4><p>${text}</p>
+        <div class='muted'>${tags} • Tagged place: ${place} • With: ${friends}</div>`;
+      postedReviews.appendChild(div);
+      reviewModal.scrollTop=reviewModal.scrollHeight;
+    };
+
+    // Image preview
+    document.getElementById('reviewImage').addEventListener('change',e=>{
+      const file=e.target.files[0];if(file){
+        const reader=new FileReader();reader.onload=ev=>{
+          imagePreview.innerHTML=`<img src="${ev.target.result}" style="max-width:100%;border-radius:8px"/>`;
+        };reader.readAsDataURL(file);
+      }
+    });
+  </script>
+</body>
+</html>
